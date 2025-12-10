@@ -1,9 +1,9 @@
 import sqlite3
 from utils.helpers import imprimir_error
-from config import BD_NAME, TABLE_NAME
+from config import DB_NAME, TABLE_NAME
 
 def conectar_db():
-    return sqlite3.connect(BD_NAME)
+    return sqlite3.connect(DB_NAME)
 
 def inicializar_db():
     try:
@@ -16,7 +16,7 @@ def inicializar_db():
                 descripcion TEXT,
                 cantidad INTEGER NOT NULL,
                 precio REAL NOT NULL,
-                categoria TEXT
+                categoria TEXT)
             '''
             cursor.execute(sql)
             conn.commit()
@@ -48,7 +48,7 @@ def buscar_producto_id(id_prod):
     try:
         with conectar_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT * FROM {TABLE_NAME} WHERE id = ?",(id_prod))
+            cursor.execute(f"SELECT * FROM {TABLE_NAME} WHERE id = ?", (id_prod,))
             return cursor.fetchone()
     except sqlite3.Error as e:
         imprimir_error(f"Error al burcar. {e}")
@@ -69,7 +69,7 @@ def actualizar_producto(id_prod,nombre,descripcion,cantidad,precio,categoria):
     try:
         with conectar_db() as conn:
             cursor = conn.cursor()
-            sql = f"UPDATE {TABLE_NAME} SET nombre=?, categoria=?, cantidad=?, precio=?, categoria=? WHERE id=?"
+            sql = f"UPDATE {TABLE_NAME} SET nombre=?, descripcion=?, cantidad=?, precio=?, categoria=? WHERE id=?"
             cursor.execute(sql,(nombre,descripcion,cantidad,precio,categoria,id_prod))
             if cursor.rowcount > 0:
                 conn.commit()
@@ -79,16 +79,38 @@ def actualizar_producto(id_prod,nombre,descripcion,cantidad,precio,categoria):
         imprimir_error(f"Error al actualizar. {e}")
         return False
 
+# def eliminar_producto(id_prod):
+#     try:
+#         with conectar_db() as conn:
+#             cursor = conn.cursor()
+#             cursor.execute(f"DELETE FROM {TABLE_NAME} WHERE id=?", (id_prod,))
+#             if cursor.rowcount > 0:
+#                 conn.commit()
+#                 return True
+#             return False
+#     except sqlite3.Error as e:
+#         imprimir_error(f"Error al eliminar. {e}")
+#         return False
+    
 def eliminar_producto(id_prod):
     try:
         with conectar_db() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM {TABLE_NAME} WHERE id=?",(id_prod))
-            if cursor.rowcount > 0:
-                conn.commit()
-                return True
-            return False
+
+            # Primero confirmamos que el id existe
+            cursor.execute(f"SELECT COUNT(1) FROM {TABLE_NAME} WHERE id = ?", (id_prod,))
+            existe = cursor.fetchone()[0]
+            if existe == 0:
+                # No existe el id solicitado
+                return False
+
+            # Ejecutamos DELETE
+            cursor.execute(f"DELETE FROM {TABLE_NAME} WHERE id = ?", (id_prod,))
+            # Commit siempre después de la operación
+            conn.commit()
+
+            # cursor.rowcount debería reflejar el cambio
+            return cursor.rowcount > 0
     except sqlite3.Error as e:
         imprimir_error(f"Error al eliminar. {e}")
         return False
-    
